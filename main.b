@@ -22,12 +22,9 @@ init(nil: ref Draw->Context, argv: list of string) {
 	sys = load Sys Sys->PATH;
 	dial = load Dial Dial->PATH;
 	arg := load Arg Arg->PATH;
-	if(arg == nil){
-		sys->fprint(stderr(), "Error: cannot load %s ­ %r\n", Arg->PATH);
-		exit;
-	}
+	if(arg == nil)
+		error(sys->sprint("cannot load %s ­ %r\n", Arg->PATH));
 
-	# sysname := readfile("/dev/sysname");
 	addr := "tcp!*!1337";
 
 	# Process commandline arguments
@@ -49,23 +46,33 @@ init(nil: ref Draw->Context, argv: list of string) {
 	# Announce connection
 	sys->print("Listening on %s\n", addr);
 	ac := dial->announce(addr);
-	if(ac == nil) {
-		error(sys->sprint("Error: couldn't announce ­ %r\n"));
-		exit;
-	}
+	if(ac == nil) 
+		error(sys->sprint("couldn't announce ­ %r\n"));
 
 	for (;;) {
 		lc := dial->listen(ac);
-		if(lc == nil){
+		if(lc == nil)
 			error(sys->sprint("listen failed ­ %r"));
-			exit;
-		}
 
 		sys->print("Incoming: %s\n", dial->netinfo(lc).raddr);
-		# spawn client(lc);
+		spawn client(lc);
 	}
 
 	exit;
+}
+
+# Client handler
+client(c: ref Dial->Connection) {
+	dfd := dial->accept(c);
+	if(dfd == nil)
+		error(sys->sprint("%s failed to accept ­ %r", c.dir));
+
+	buf := array[Sys->ATOMICIO] of byte;
+
+	# Loop and read forever
+	for(; (n := sys->read(dfd, buf, len buf)) > 0;) {
+		sys->write(dfd, buf, n);
+	}
 }
 
 # Error handling
@@ -77,18 +84,4 @@ error(e: string) {
 # Outputs stderr fd
 stderr(): ref Sys->FD {
 	return sys->fildes(2);
-}
-
-# Read from file and return a string
-readfile(f: string): string {
-	fd := sys->open(f, sys->OREAD);
-	if(fd == nil)
-		return nil;
-
-	buf := array[8192] of byte;
-	n := sys->read(fd, buf, len buf);
-	if(n < 0)
-		return nil;
-
-	return string buf[0:n];	
 }
