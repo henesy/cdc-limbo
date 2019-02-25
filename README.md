@@ -14,7 +14,9 @@ Don't.
 
 This runs out of its working directory for now. Write a wrapper to call it, or call it directly from emu(1). 
 
-If you insist, create `/dis/cdc` (you might have to do this from the host OS)
+If you insist, create `/dis/cdc` (you might have to do this from the host OS) and:
+
+	mk install
 
 ## Usage
 
