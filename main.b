@@ -11,7 +11,7 @@ include "silo.m";
 sys : Sys;
 dial : Dial;
 
-silo : Silo;
+silo : SmartSilo;
 
 # Global variables
 mode := 0;	# 0, 1 = silo, tractor
@@ -57,7 +57,7 @@ init(nil: ref Draw->Context, argv: list of string) {
 	# Load necessary modules
 	case mode {
 	0 =>
-		silo = load Silo "./silo.dis";
+		silo = load SmartSilo "./silo.dis";
 		silo->init();
 	* =>
 		;
@@ -93,6 +93,7 @@ client(c: ref Dial->Connection) {
 	sys->write(dfd, array of byte prompt, 2);
 
 	# Loop and read forever
+	# TODO ­ use msgio(2)
 	while((n := sys->read(dfd, buf, len buf)) > 0) {
 		msg := string buf[:n];
 
