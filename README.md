@@ -2,6 +2,8 @@
 
 This is an implementation of the smart farm software for ISU2 2019 CDC implemented in Limbo on Inferno ([Purgatorio](http://code.9front.org/hg/purgatorio/)) to the tune of the AGRO specification. 
 
+Currently only the silo functionality is supported. 
+
 ## Build
 
 	mk
