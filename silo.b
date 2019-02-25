@@ -54,6 +54,10 @@ docmd(msg: string): string {
 		;
 	};
 
+	# Block on busy
+	if(s.status != "idle")
+		return "err: busy ­ " + s.status;
+
 	# Block on status updates, bar a whitelist of cmds
 	if(!s.power) {
 		errstr := "err: powered off";
