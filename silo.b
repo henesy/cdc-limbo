@@ -1,10 +1,12 @@
 implement SmartSilo;
 
 include "silo.m";
+include "util.m";
 
 include "sys.m";
 
 sys : Sys;
+util : Util;
 
 # stdbool
 false	:= 0;
@@ -14,32 +16,60 @@ invalid := "err: invalid argument";
 # Initialize the module
 init() {
 	sys = load Sys Sys->PATH;
+	util = load Util "./util.dis";
 
 	# Init silo
+	s.power	= false;
 	s.status	= "idle";
 	s.lights	= false;
 	s.humid	= 30;
 	s.temp	= 20;
 	s.supply	= 0;
 	s.cont	= "corn";
+	s.schan	= chan of string;	# might be unnecessary
 }
 
 # Process a command
-docmd(fd: ref Sys->FD, msg: string, width: int) {
+docmd(msg: string): string {
 	str := "ok.";
-	msg = tr(msg, '\r', ' ');
+
+	msg = util->tr(msg, '\r', ' ');
 
 	# Process commands
 	(n, argv) := sys->tokenize(msg, " \t");
-	n--;	# Assume we get a \n as per AGRO spec
+	n--;		# Assume we get a \n as per AGRO spec
 
 	case n {
 	0 =>
-		str = "err: no command";
+		return "err: no command";
 	* =>
 
+	cmd := hd argv;
+
+	# Update status, if any queued
+	alt {
+	s.status = <-s.schan =>
+		;
+	* =>
+		;
+	};
+
+	# Block on status updates, bar a whitelist of cmds
+	if(!s.power) {
+		errstr := "err: powered off";
+
+		case cmd {
+		"power" =>
+			;
+		"status" =>
+			;
+		* =>
+			return errstr;
+		};
+	}
+
 	# Switch on command
-	case hd argv {
+	case cmd {
 	"lights" =>
 		case n {
 		1=>
@@ -48,6 +78,7 @@ docmd(fd: ref Sys->FD, msg: string, width: int) {
 			else
 				str = "off";
 		* =>
+			# argv[1]
 			case hd tl argv {
 			"on" =>
 				s.lights = true;
@@ -57,28 +88,33 @@ docmd(fd: ref Sys->FD, msg: string, width: int) {
 				str = invalid;
 			}
 		}
-	* =>
-		# sys->print("got: %s with %d\n", hd argv, n);
-		str = "err: command not found";
-	};
-	};
+
+	"power" =>
+		case n {
+		1=>
+			if(s.power)
+				str = "on";
+			else
+				str = "off";
+		* =>
+			# argv[1]
+			case hd tl argv {
+			"on" =>
+				s.power = true;
+			"off" =>
+				s.power = false;
+			* =>
+				str = invalid;
+			}
+		}
+
+	"status" =>
+		str = s.status;
 	
-	# Write out response
-	str += "\n";
+	* =>
+		return "err: command not found";
+	};
+	};
 
-	w := width;
-	if(len str < width)
-		w = len str;
-
-	sys->write(fd, array of byte str, w);
-}
-
-# Replace within a string
-tr(s: string, a: int, b: int): string {
-	for(i := 0; i < len s; i++) {
-		if(s[i] == a)
-			s[i] = b;
-	}
-
-	return s;
+	return str;
 }

@@ -96,13 +96,23 @@ client(c: ref Dial->Connection) {
 	# TODO ­ use msgio(2)
 	while((n := sys->read(dfd, buf, len buf)) > 0) {
 		msg := string buf[:n];
+		str := "";
 
 		case mode {
 		0 =>
-			silo->docmd(dfd, msg, width);
+			str = silo->docmd(msg);
 		* =>
-			sys->write(dfd, buf, n);
+			str = "err: nothing implemented.";
 		}
+
+		# Write out response
+		str += "\n";
+
+		w := width;
+		if(len str < width)
+		w = len str;
+
+		sys->write(dfd, array of byte str, w);
 		
 		sys->write(dfd, array of byte prompt, 2);
 	}
