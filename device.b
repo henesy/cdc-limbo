@@ -1,4 +1,4 @@
-implement cdc;
+implement device;
 
 include "sys.m";
 include "dial.m";
@@ -20,7 +20,7 @@ width := 1024;
 prompt := "> ";
 
 # Module definition
-cdc: module {
+device: module {
 	init:	fn(nil: ref Draw->Context, argv: list of string);
 };
 

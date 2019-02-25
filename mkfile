@@ -1,7 +1,9 @@
 </mkconfig
 
+DISBIN = /dis/cdc
+
 TARG=\
-	main.dis\
+	device.dis\
 	silo.dis\
 	util.dis\
 
