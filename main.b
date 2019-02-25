@@ -5,14 +5,21 @@ include "dial.m";
 include "draw.m";
 include "arg.m";
 
+include "silo.m";
+
 # Import handles
 sys : Sys;
 dial : Dial;
 
+silo : Silo;
+
 # Global variables
 mode := 0;	# 0, 1 = silo, tractor
 nusers := 0;
+width := 1024;
+prompt := "> ";
 
+# Module definition
 cdc: module {
 	init:	fn(nil: ref Draw->Context, argv: list of string);
 };
@@ -29,7 +36,7 @@ init(nil: ref Draw->Context, argv: list of string) {
 
 	# Process commandline arguments
 	arg->init(argv);
-	arg->setusage("cdc [-st]");
+	arg->setusage("cdc [-st] [-w size] [-p prompt]");
 	while ((opt := arg->opt()) != 0) {
 		case opt {
 		's' =>
@@ -38,9 +45,22 @@ init(nil: ref Draw->Context, argv: list of string) {
 			mode = 1;
 		'S' =>
 			addr = arg->earg();
+		'w' =>
+			width = int arg->earg();
+		'p' =>
+			prompt = arg->earg();
 		* =>
 			arg->usage();
 		}
+	}
+
+	# Load necessary modules
+	case mode {
+	0 =>
+		silo = load Silo "./silo.dis";
+		silo->init();
+	* =>
+		;
 	}
 
 	# Announce connection
@@ -49,6 +69,7 @@ init(nil: ref Draw->Context, argv: list of string) {
 	if(ac == nil) 
 		error(sys->sprint("couldn't announce ­ %r\n"));
 
+	# Accept all connections forever
 	for (;;) {
 		lc := dial->listen(ac);
 		if(lc == nil)
@@ -69,9 +90,20 @@ client(c: ref Dial->Connection) {
 
 	buf := array[Sys->ATOMICIO] of byte;
 
+	sys->write(dfd, array of byte prompt, 2);
+
 	# Loop and read forever
-	for(; (n := sys->read(dfd, buf, len buf)) > 0;) {
-		sys->write(dfd, buf, n);
+	while((n := sys->read(dfd, buf, len buf)) > 0) {
+		msg := string buf[:n];
+
+		case mode {
+		0 =>
+			silo->docmd(dfd, msg, width);
+		* =>
+			sys->write(dfd, buf, n);
+		}
+		
+		sys->write(dfd, array of byte prompt, 2);
 	}
 }
 
